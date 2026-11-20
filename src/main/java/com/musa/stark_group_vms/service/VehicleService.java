@@ -34,6 +34,15 @@ public interface VehicleService {
     VehicleResponse updateVehicle(Long id, UpdateVehicleRequest request);
 
     /**
+     * Deletes an existing vehicle by ID.
+     *
+     * @param id the ID of the vehicle to delete
+     * @throws com.musa.stark_group_vms.exception.ResourceNotFoundException
+     *         if no vehicle exists with the given ID
+     */
+    void deleteVehicle(Long id);
+
+    /**
      * Retrieves a paginated list of vehicles filtered by the specified criteria.
      *
      * @param search optional keyword to match vehicle number, brand, model, or driver name

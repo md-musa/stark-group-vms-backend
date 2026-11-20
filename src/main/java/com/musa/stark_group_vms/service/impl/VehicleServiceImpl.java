@@ -89,6 +89,14 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
+    @Transactional
+    public void deleteVehicle(Long id) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        vehicleRepository.delete(vehicle);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<VehicleResponse> getVehicles(
             String search,

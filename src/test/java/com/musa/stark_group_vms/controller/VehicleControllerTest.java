@@ -25,7 +25,10 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -536,5 +539,32 @@ class VehicleControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Invalid value for parameter 'id': invalidId"));
+    }
+
+    @Test
+    void deleteVehicle_ExistingId_Returns204() throws Exception {
+        doNothing().when(vehicleService).deleteVehicle(1L);
+
+        mockMvc.perform(delete("/api/vehicles/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteVehicle_NonExistentId_Returns404() throws Exception {
+        doThrow(new ResourceNotFoundException("Vehicle not found with id: 999"))
+                .when(vehicleService).deleteVehicle(999L);
+
+        mockMvc.perform(delete("/api/vehicles/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Vehicle not found with id: 999"));
+    }
+
+    @Test
+    void deleteVehicle_InvalidIdType_Returns400() throws Exception {
+        mockMvc.perform(delete("/api/vehicles/notAnId"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid value for parameter 'id': notAnId"));
     }
 }

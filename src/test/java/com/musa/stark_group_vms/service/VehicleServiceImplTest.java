@@ -352,4 +352,22 @@ class VehicleServiceImplTest {
                 .isInstanceOf(DuplicateResourceException.class)
                 .hasMessageContaining("A vehicle with this vehicle number already exists.");
     }
+
+    @Test
+    void deleteVehicle_Success() {
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(sampleVehicle));
+
+        vehicleService.deleteVehicle(1L);
+
+        verify(vehicleRepository).delete(sampleVehicle);
+    }
+
+    @Test
+    void deleteVehicle_NotFound_ThrowsResourceNotFoundException() {
+        when(vehicleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> vehicleService.deleteVehicle(999L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Vehicle not found with id: 999");
+    }
 }
