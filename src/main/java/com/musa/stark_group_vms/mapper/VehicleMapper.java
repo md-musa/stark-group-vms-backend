@@ -37,9 +37,6 @@ public class VehicleMapper {
         vehicle.setSeatingCapacity(request.seatingCapacity());
         vehicle.setDriverName(request.driverName());
         vehicle.setDriverPhone(request.driverPhone());
-        if (request.status() != null) {
-            vehicle.setStatus(request.status());
-        }
     }
 
     public VehicleResponse toResponse(Vehicle vehicle) {

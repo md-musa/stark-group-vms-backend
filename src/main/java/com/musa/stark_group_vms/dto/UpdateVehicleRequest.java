@@ -1,7 +1,6 @@
 package com.musa.stark_group_vms.dto;
 
 import com.musa.stark_group_vms.enums.FuelType;
-import com.musa.stark_group_vms.enums.VehicleStatus;
 import com.musa.stark_group_vms.enums.VehicleType;
 import jakarta.validation.constraints.*;
 
@@ -40,8 +39,6 @@ public record UpdateVehicleRequest(
 
         @Size(max = 20, message = "Driver phone must not exceed 20 characters")
         @Pattern(regexp = "^[0-9+\\-() ]*$", message = "Driver phone must contain only valid phone number characters")
-        String driverPhone,
-
-        VehicleStatus status
+        String driverPhone
 ) {
 }

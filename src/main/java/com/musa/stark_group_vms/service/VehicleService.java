@@ -2,6 +2,7 @@ package com.musa.stark_group_vms.service;
 
 import com.musa.stark_group_vms.dto.CreateVehicleRequest;
 import com.musa.stark_group_vms.dto.PageResponse;
+import com.musa.stark_group_vms.dto.UpdateVehicleRequest;
 import com.musa.stark_group_vms.dto.VehicleResponse;
 import com.musa.stark_group_vms.enums.FuelType;
 import com.musa.stark_group_vms.enums.VehicleStatus;
@@ -18,6 +19,19 @@ public interface VehicleService {
      *         if a vehicle with the same vehicle number already exists
      */
     VehicleResponse createVehicle(CreateVehicleRequest request);
+
+    /**
+     * Updates an existing vehicle.
+     *
+     * @param id the ID of the vehicle to update
+     * @param request the update request DTO containing updated vehicle data
+     * @return the updated vehicle as a response DTO
+     * @throws com.musa.stark_group_vms.exception.ResourceNotFoundException
+     *         if no vehicle exists with the given ID
+     * @throws com.musa.stark_group_vms.exception.DuplicateResourceException
+     *         if another vehicle already uses the requested vehicle number
+     */
+    VehicleResponse updateVehicle(Long id, UpdateVehicleRequest request);
 
     /**
      * Retrieves a paginated list of vehicles filtered by the specified criteria.

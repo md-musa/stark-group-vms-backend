@@ -3,12 +3,14 @@ package com.musa.stark_group_vms.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.musa.stark_group_vms.dto.CreateVehicleRequest;
 import com.musa.stark_group_vms.dto.PageResponse;
+import com.musa.stark_group_vms.dto.UpdateVehicleRequest;
 import com.musa.stark_group_vms.dto.VehicleResponse;
 import com.musa.stark_group_vms.enums.FuelType;
 import com.musa.stark_group_vms.enums.VehicleStatus;
 import com.musa.stark_group_vms.enums.VehicleType;
 import com.musa.stark_group_vms.exception.DuplicateResourceException;
 import com.musa.stark_group_vms.exception.InvalidOperationException;
+import com.musa.stark_group_vms.exception.ResourceNotFoundException;
 import com.musa.stark_group_vms.service.VehicleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -334,5 +337,204 @@ class VehicleControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Invalid value for parameter 'page': abc"));
+    }
+
+    @Test
+    void updateVehicle_ValidRequest_Returns200() throws Exception {
+        UpdateVehicleRequest request = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        VehicleResponse response = new VehicleResponse(
+                1L,
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678",
+                VehicleStatus.AVAILABLE,
+                LocalDateTime.now().minusDays(1),
+                LocalDateTime.now()
+        );
+
+        when(vehicleService.updateVehicle(eq(1L), any(UpdateVehicleRequest.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.vehicleNumber").value("dhaka-metro-ga-11-2345"))
+                .andExpect(jsonPath("$.color").value("Silver"))
+                .andExpect(jsonPath("$.manufacturingYear").value(2021))
+                .andExpect(jsonPath("$.status").value("AVAILABLE"));
+    }
+
+    @Test
+    void updateVehicle_NotFound_Returns404() throws Exception {
+        UpdateVehicleRequest request = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleService.updateVehicle(eq(999L), any(UpdateVehicleRequest.class)))
+                .thenThrow(new ResourceNotFoundException("Vehicle not found with id: 999"));
+
+        mockMvc.perform(put("/api/vehicles/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Vehicle not found with id: 999"));
+    }
+
+    @Test
+    void updateVehicle_DuplicateVehicleNumber_Returns409() throws Exception {
+        UpdateVehicleRequest request = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-9999",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleService.updateVehicle(eq(1L), any(UpdateVehicleRequest.class)))
+                .thenThrow(new DuplicateResourceException("A vehicle with this vehicle number already exists."));
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("A vehicle with this vehicle number already exists."));
+    }
+
+    @Test
+    void updateVehicle_MissingRequiredFields_Returns400() throws Exception {
+        String invalidJson = """
+                {
+                  "color": "Silver",
+                  "manufacturingYear": 2021
+                }
+                """;
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void updateVehicle_InvalidManufacturingYear_Returns400() throws Exception {
+        String invalidJson = """
+                {
+                  "vehicleNumber": "dhaka-metro-ga-11-2345",
+                  "vehicleType": "MICROBUS",
+                  "brand": "Toyota",
+                  "model": "Hiace",
+                  "manufacturingYear": 1800,
+                  "fuelType": "OCTANE",
+                  "seatingCapacity": 12
+                }
+                """;
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fieldErrors.manufacturingYear").exists());
+    }
+
+    @Test
+    void updateVehicle_InvalidSeatingCapacity_Returns400() throws Exception {
+        String invalidJson = """
+                {
+                  "vehicleNumber": "dhaka-metro-ga-11-2345",
+                  "vehicleType": "MICROBUS",
+                  "brand": "Toyota",
+                  "model": "Hiace",
+                  "manufacturingYear": 2020,
+                  "fuelType": "OCTANE",
+                  "seatingCapacity": 0
+                }
+                """;
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fieldErrors.seatingCapacity").exists());
+    }
+
+    @Test
+    void updateVehicle_InvalidEnum_Returns400() throws Exception {
+        String invalidJson = """
+                {
+                  "vehicleNumber": "dhaka-metro-ga-11-2345",
+                  "vehicleType": "SPACESHIP",
+                  "brand": "Toyota",
+                  "model": "Hiace",
+                  "fuelType": "OCTANE"
+                }
+                """;
+
+        mockMvc.perform(put("/api/vehicles/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void updateVehicle_InvalidIdType_Returns400() throws Exception {
+        UpdateVehicleRequest request = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        mockMvc.perform(put("/api/vehicles/invalidId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid value for parameter 'id': invalidId"));
     }
 }

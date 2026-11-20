@@ -2,6 +2,7 @@ package com.musa.stark_group_vms.service;
 
 import com.musa.stark_group_vms.dto.CreateVehicleRequest;
 import com.musa.stark_group_vms.dto.PageResponse;
+import com.musa.stark_group_vms.dto.UpdateVehicleRequest;
 import com.musa.stark_group_vms.dto.VehicleResponse;
 import com.musa.stark_group_vms.entity.Vehicle;
 import com.musa.stark_group_vms.enums.FuelType;
@@ -9,6 +10,7 @@ import com.musa.stark_group_vms.enums.VehicleStatus;
 import com.musa.stark_group_vms.enums.VehicleType;
 import com.musa.stark_group_vms.exception.DuplicateResourceException;
 import com.musa.stark_group_vms.exception.InvalidOperationException;
+import com.musa.stark_group_vms.exception.ResourceNotFoundException;
 import com.musa.stark_group_vms.mapper.VehicleMapper;
 import com.musa.stark_group_vms.repository.VehicleRepository;
 import com.musa.stark_group_vms.service.impl.VehicleServiceImpl;
@@ -28,6 +30,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -249,5 +252,104 @@ class VehicleServiceImplTest {
         ))
                 .isInstanceOf(InvalidOperationException.class)
                 .hasMessageContaining("Invalid sort direction: 'DIAGONAL'");
+    }
+
+    @Test
+    void updateVehicle_Success_RetainsExistingNumber() {
+        UpdateVehicleRequest updateRequest = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace Super GL",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                14,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(sampleVehicle));
+        when(vehicleRepository.existsByVehicleNumberAndIdNot("dhaka-metro-ga-11-2345", 1L)).thenReturn(false);
+        when(vehicleRepository.save(sampleVehicle)).thenReturn(sampleVehicle);
+        when(vehicleMapper.toResponse(sampleVehicle)).thenReturn(sampleResponse);
+
+        VehicleResponse result = vehicleService.updateVehicle(1L, updateRequest);
+
+        assertThat(result).isNotNull();
+        verify(vehicleMapper).updateEntity(eq(sampleVehicle), eq(updateRequest), eq("dhaka-metro-ga-11-2345"));
+        verify(vehicleRepository).save(sampleVehicle);
+    }
+
+    @Test
+    void updateVehicle_Success_ChangesToNewUniqueNumber() {
+        UpdateVehicleRequest updateRequest = new UpdateVehicleRequest(
+                "DHAKA-METRO-GA-99-9999",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2020,
+                "White",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(sampleVehicle));
+        when(vehicleRepository.existsByVehicleNumberAndIdNot("dhaka-metro-ga-99-9999", 1L)).thenReturn(false);
+        when(vehicleRepository.save(sampleVehicle)).thenReturn(sampleVehicle);
+        when(vehicleMapper.toResponse(sampleVehicle)).thenReturn(sampleResponse);
+
+        VehicleResponse result = vehicleService.updateVehicle(1L, updateRequest);
+
+        assertThat(result).isNotNull();
+        verify(vehicleMapper).updateEntity(eq(sampleVehicle), eq(updateRequest), eq("dhaka-metro-ga-99-9999"));
+        verify(vehicleRepository).save(sampleVehicle);
+    }
+
+    @Test
+    void updateVehicle_NotFound_ThrowsResourceNotFoundException() {
+        UpdateVehicleRequest updateRequest = new UpdateVehicleRequest(
+                "dhaka-metro-ga-11-2345",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> vehicleService.updateVehicle(999L, updateRequest))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Vehicle not found with id: 999");
+    }
+
+    @Test
+    void updateVehicle_DuplicateVehicleNumber_ThrowsDuplicateResourceException() {
+        UpdateVehicleRequest updateRequest = new UpdateVehicleRequest(
+                "dhaka-metro-ga-22-2222",
+                VehicleType.MICROBUS,
+                "Toyota",
+                "Hiace",
+                2021,
+                "Silver",
+                FuelType.OCTANE,
+                12,
+                "Karim Uddin",
+                "01712345678"
+        );
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(sampleVehicle));
+        when(vehicleRepository.existsByVehicleNumberAndIdNot("dhaka-metro-ga-22-2222", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> vehicleService.updateVehicle(1L, updateRequest))
+                .isInstanceOf(DuplicateResourceException.class)
+                .hasMessageContaining("A vehicle with this vehicle number already exists.");
     }
 }

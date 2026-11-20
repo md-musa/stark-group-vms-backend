@@ -2,6 +2,7 @@ package com.musa.stark_group_vms.service.impl;
 
 import com.musa.stark_group_vms.dto.CreateVehicleRequest;
 import com.musa.stark_group_vms.dto.PageResponse;
+import com.musa.stark_group_vms.dto.UpdateVehicleRequest;
 import com.musa.stark_group_vms.dto.VehicleResponse;
 import com.musa.stark_group_vms.entity.Vehicle;
 import com.musa.stark_group_vms.enums.FuelType;
@@ -9,6 +10,7 @@ import com.musa.stark_group_vms.enums.VehicleStatus;
 import com.musa.stark_group_vms.enums.VehicleType;
 import com.musa.stark_group_vms.exception.DuplicateResourceException;
 import com.musa.stark_group_vms.exception.InvalidOperationException;
+import com.musa.stark_group_vms.exception.ResourceNotFoundException;
 import com.musa.stark_group_vms.mapper.VehicleMapper;
 import com.musa.stark_group_vms.repository.VehicleRepository;
 import com.musa.stark_group_vms.service.VehicleService;
@@ -67,6 +69,22 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         Vehicle vehicle = vehicleMapper.toEntity(request, normalizedNumber);
+        return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
+    }
+
+    @Override
+    @Transactional
+    public VehicleResponse updateVehicle(Long id, UpdateVehicleRequest request) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+
+        String normalizedNumber = normalizeVehicleNumber(request.vehicleNumber());
+
+        if (vehicleRepository.existsByVehicleNumberAndIdNot(normalizedNumber, id)) {
+            throw new DuplicateResourceException("A vehicle with this vehicle number already exists.");
+        }
+
+        vehicleMapper.updateEntity(vehicle, request, normalizedNumber);
         return vehicleMapper.toResponse(vehicleRepository.save(vehicle));
     }
 
