@@ -7,8 +7,8 @@ WORKDIR /app
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 
-# Download dependencies before copying source (cached unless build.gradle changes)
-RUN ./gradlew dependencies --no-daemon || true
+# Fix permissions (Windows strips execute bit) then pre-download dependencies
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon || true
 
 # Copy source and build the fat JAR, skipping tests
 COPY src ./src
